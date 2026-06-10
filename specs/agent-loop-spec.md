@@ -20,7 +20,7 @@ This is the core of what makes Plant Advisor an *agent* rather than a simple cha
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `user_message` | `str` | The user's current message |
-| `history` | `list` | Gradio conversation history — list of `[user_msg, assistant_msg]` pairs |
+| `history` | `list` | Gradio conversation history — list of `{"role": ..., "content": ...}` message dicts |
 
 **Output:** `str`
 
@@ -37,16 +37,16 @@ The agent's final text response for this turn. Should never be empty — if some
 ### Messages list structure
 
 The messages list must start with the system prompt, then replay the conversation
-history, then add the new user message. Gradio history is a list of `[user, assistant]`
-pairs — convert each pair to two API-format dicts:
+history, then add the new user message. The app creates its chat UI with
+`type="messages"`, so Gradio history arrives as a list of API-format dicts with
+`role` and `content` keys. Gradio may include extra keys (like `metadata`), so
+copy only the two fields the API expects:
 
 ```python
 messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
-for user_msg, assistant_msg in history:
-    messages.append({"role": "user", "content": user_msg})
-    if assistant_msg:
-        messages.append({"role": "assistant", "content": assistant_msg})
+for msg in history:
+    messages.append({"role": msg["role"], "content": msg["content"]})
 
 messages.append({"role": "user", "content": user_message})
 ```

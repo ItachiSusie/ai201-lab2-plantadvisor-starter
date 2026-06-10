@@ -124,7 +124,7 @@ def run_agent(user_message: str, history: list) -> str:
       - The assistant message must be appended BEFORE tool results
       - Tool result messages use role="tool" with a tool_call_id field
       - Append the assistant's message object directly (not just its content)
-      - The history format from Gradio: list of [user_message, assistant_message] pairs
+      - The history format from Gradio: list of {"role": ..., "content": ...} dicts
 
     Before writing code, complete specs/agent-loop-spec.md.
     """

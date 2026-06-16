@@ -132,4 +132,41 @@ def run_agent(user_message: str, history: list) -> str:
 
     Before writing code, complete specs/agent-loop-spec.md.
     """
-    return "🌱 Agent not yet implemented. Complete Milestone 2 to activate the Plant Advisor."
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    for msg in history:
+        messages.append({"role": msg["role"], "content": msg["content"]})
+    messages.append({"role": "user", "content": user_message})
+
+    tool_rounds = 0
+    while True:
+        response = _client.chat.completions.create(
+        model=LLM_MODEL,
+        messages=messages,
+        tools=TOOL_DEFINITIONS,
+        tool_choice="auto",
+    )
+        assistant_message = response.choices[0].message
+
+        if not assistant_message.tool_calls:
+            break
+
+        if tool_rounds >= MAX_TOOL_ROUNDS:
+            return "I needed more tool calls than allowed to answer your question. Please try rephrasing."
+
+        messages.append(assistant_message)
+
+        for tool_call in assistant_message.tool_calls:
+            tool_name = tool_call.function.name
+            raw_args = tool_call.function.arguments
+            tool_args = json.loads(raw_args) if raw_args else {}
+            tool_result = dispatch_tool(tool_name, tool_args)
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "content": tool_result,
+            })
+
+        tool_rounds += 1
+
+    final_text = response.choices[0].message.content
+    return final_text or "I wasn't able to generate a response. Please try again."

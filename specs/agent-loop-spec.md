@@ -9,7 +9,7 @@
 
 Orchestrate a single conversational turn for the Plant Advisor agent. Given a user message and the conversation history, call the LLM with available tools, execute any tool calls the LLM requests, and return the final text response.
 
-This is the core of what makes Plant Advisor an *agent* rather than a simple chatbot: the ability to decide which tools to call, use their results to inform its response, and loop until it has everything it needs.
+This is the core of what makes Plant Advisor an _agent_ rather than a simple chatbot: the ability to decide which tools to call, use their results to inform its response, and loop until it has everything it needs.
 
 ---
 
@@ -17,10 +17,10 @@ This is the core of what makes Plant Advisor an *agent* rather than a simple cha
 
 **Inputs:**
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `user_message` | `str` | The user's current message |
-| `history` | `list` | Gradio conversation history — list of `{"role": ..., "content": ...}` message dicts |
+| Parameter      | Type   | Description                                                                         |
+| -------------- | ------ | ----------------------------------------------------------------------------------- |
+| `user_message` | `str`  | The user's current message                                                          |
+| `history`      | `list` | Gradio conversation history — list of `{"role": ..., "content": ...}` message dicts |
 
 **Output:** `str`
 
@@ -30,7 +30,7 @@ The agent's final text response for this turn. Should never be empty — if some
 
 ## Design Decisions
 
-*Read `specs/system-design.md` (especially the "How the Groq Tool Calling API Works" section) before reviewing these. Complete the two blank fields before writing any code.*
+_Read `specs/system-design.md` (especially the "How the Groq Tool Calling API Works" section) before reviewing these. Complete the two blank fields before writing any code._
 
 ---
 
@@ -126,27 +126,47 @@ for tool_call in assistant_message.tool_calls:
 
 ### Loop termination conditions
 
-*The loop should stop when: (a) the LLM returns a response with no tool calls, OR (b) the MAX_TOOL_ROUNDS limit is reached. Describe how you will detect each condition and what you will return in each case.*
+_The loop should stop when: (a) the LLM returns a response with no tool calls, OR (b) the MAX_TOOL_ROUNDS limit is reached. Describe how you will detect each condition and what you will return in each case._
 
 ```
-[your answer here]
+Maintain a tool_rounds counter, starting at 0, incremented after each round of
+tool calls completes.
+
+At the TOP of the while loop, before executing anything:
+
+  (a) No tool calls: if not assistant_message.tool_calls → break
+      The loop exits normally; extract content from the final response.
+
+  (b) Limit reached: if tool_rounds >= MAX_TOOL_ROUNDS → return fallback string
+      The last response still has tool_calls and no content, so return a
+      user-readable message directly rather than trying to extract content:
+      "I needed more tool calls than allowed to answer. Please try rephrasing."
+
+Checking (a) before (b) means a clean final answer always exits cleanly even if
+tool_rounds is high.
 ```
 
 ---
 
 ### Extracting the final text response
 
-*Once the loop exits because there are no more tool calls, how do you extract the text content from the response object? What field holds the string you should return?*
+_Once the loop exits because there are no more tool calls, how do you extract the text content from the response object? What field holds the string you should return?_
 
 ```
-[your answer here]
+response.choices[0].message.content
+
+`choices` is a list; index 0 is the single completion. `.message` is the
+assistant message object. `.content` is the plain text string.
+
+Guard against an empty/None content just in case:
+  return final_text or "I wasn't able to generate a response. Please try again."
 ```
 
 ---
 
 ## Implementation Notes
 
-*Fill this in after implementing and testing.*
+_Fill this in after implementing and testing._
 
 **Trace of a working agent turn (what tools were called and in what order):**
 
@@ -160,7 +180,7 @@ Final response: [brief description]
 **What happens when you ask about a plant that isn't in the database?**
 
 ```
-[describe the behavior you observed]
+The plant not able found and the tool of find plant with have 'found' false, which will break the while loop and stop here, agent will return assitant content to notice not found and suggest user retry
 ```
 
 **One thing about the tool call API that surprised you:**
